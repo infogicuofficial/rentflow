@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+db.sqlite3
+rentflow.sqlite3
+media/invoices/
+media/documents/
+media/payments/
+media/profiles/
+media/buildings/
+staticfiles/
+logs/*.log
+dist/
+build/
+*.spec.bak
+.DS_Store

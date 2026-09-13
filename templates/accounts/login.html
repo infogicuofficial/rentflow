@@ -1,0 +1,67 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · RentFlow</title>
+  <link rel="icon" href="{% static 'images/logo/rentflow-mark.png' %}">
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/animations.css' %}">
+  <style>
+    body { min-height: 100vh; display: flex; }
+    .login-split { display: grid; grid-template-columns: 1fr 460px; width: 100%; min-height: 100vh; }
+    @media (max-width: 900px) { .login-split { grid-template-columns: 1fr; } .login-visual { display: none; } }
+    .login-visual { position: relative; background: url("{% static 'images/login-building.jpg' %}") center/cover; }
+    .login-visual .veil { position: absolute; inset: 0; background: linear-gradient(160deg, rgba(16,31,61,0.88), rgba(22,48,92,0.45)); }
+    .login-visual .quote { position: absolute; left: 46px; bottom: 52px; right: 60px; color: #fff; }
+    .login-visual .quote h2 { color: #fff; font-size: 24px; margin-bottom: 8px; }
+    .login-visual .quote p { color: #c7d2e6; font-size: 14px; max-width: 420px; }
+    .login-side { display: flex; align-items: center; justify-content: center; padding: 40px; background: #fff; }
+    .login-card { width: 100%; max-width: 330px; }
+    .login-card .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; }
+    .login-card .brand img { width: 36px; height: 36px; border-radius: 8px; }
+    .login-card .brand b { font-size: 19px; color: var(--navy-900); }
+    .login-card .brand b span { color: var(--orange-500); }
+  </style>
+</head>
+<body>
+<div class="login-split">
+  <div class="login-visual">
+    <div class="veil"></div>
+    <div class="quote rise">
+      <h2>Every rent month, accounted for.</h2>
+      <p>RentFlow bills in arrears — August's rent is collected in September — and keeps deposits, increases and invoices reconciled automatically.</p>
+    </div>
+  </div>
+  <div class="login-side">
+    <div class="login-card rise-1 rise">
+      <div class="brand">
+        <img src="{% static 'images/logo/rentflow-mark.png' %}" alt="">
+        <b>Rent<span>Flow</span></b>
+      </div>
+      <h1 style="font-size:20px; margin-bottom:4px;">Sign in</h1>
+      <p class="muted small" style="margin-bottom:22px;">Use your management account to continue.</p>
+      {% if form.errors %}
+        <div class="alert alert-red">Incorrect username or password. Please try again.</div>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="field">
+          <label for="id_username">Username</label>
+          <input class="input" type="text" name="username" id="id_username" autofocus required>
+        </div>
+        <div class="field">
+          <label for="id_password">Password</label>
+          <input class="input" type="password" name="password" id="id_password" required>
+        </div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn btn-primary btn-lg" style="width:100%; margin-top:6px;" type="submit">Sign in to RentFlow</button>
+      </form>
+      <p class="muted small" style="margin-top:20px;">Forgot your password? Ask an administrator to reset it from the admin panel.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

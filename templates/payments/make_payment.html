@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Record payment{% endblock %}
+{% block breadcrumbs %}
+<span class="sep">/</span><a href="{% url 'payments:main' %}">Payments</a>
+<span class="sep">/</span><span class="here">Record payment</span>
+{% endblock %}
+{% block quick_actions %}{% endblock %}
+
+{% block content %}
+<div class="page-head rise">
+  <div>
+    <h1>Record a rent payment</h1>
+    <p class="sub">
+      Post-paid billing — a month's rent becomes payable from the 1st of the <em>following</em> month.
+      The current month is never billed in advance.
+    </p>
+  </div>
+</div>
+
+<div class="portal-layout">
+  <div>
+    <!-- STEP 1 — property -->
+    <section class="step rise rise-1" id="step-1">
+      <div class="step-head">
+        <span class="step-no">1</span>
+        <div>
+          <h2>Select the property</h2>
+          <div class="d">Choose the building, then the flat. Occupant details load automatically.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="sel-building">Building</label>
+            <select class="select" id="sel-building">
+              <option value="">— Select building —</option>
+              {% for b in buildings %}
+              <option value="{{ b.pk }}">Building {{ b.number }} — {{ b.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="sel-flat">Flat / unit</label>
+            <select class="select" id="sel-flat" disabled>
+              <option value="">— Select building first —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2 — occupant (auto-fetch) -->
+    <section class="step locked" id="step-2">
+      <div class="step-head">
+        <span class="step-no">2</span>
+        <div>
+          <h2>Occupant details</h2>
+          <div class="d">Fetched from the tenancy record — read-only.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div id="occ-skeletons" hidden>
+          <div class="skeleton" style="height:38px;margin-bottom:10px;"></div>
+          <div class="skeleton" style="height:38px;margin-bottom:10px;"></div>
+        </div>
+        <div id="vacant-note" class="alert alert-amber" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          <div>This unit is currently <b>vacant</b> — there is no active tenancy to bill.</div>
+        </div>
+        <div id="occ-fields" hidden>
+          <div class="form-grid">
+            <div class="field"><label>Occupant name</label><input class="input" id="f-name" readonly></div>
+            <div class="field"><label>Occupant ID / NID</label><input class="input" id="f-id" readonly></div>
+            <div class="field"><label>Email</label><input class="input" id="f-email" readonly></div>
+            <div class="field"><label>Phone</label><input class="input" id="f-phone" readonly></div>
+            <div class="field"><label>Current monthly rent</label><input class="input" id="f-rent" readonly></div>
+            <div class="field">
+              <label for="f-date">Payment date</label>
+              <input class="input" type="date" id="f-date" value="{{ today|date:'Y-m-d' }}">
+              <div class="hint">Pre-filled with today — adjust if the money arrived earlier.</div>
+            </div>
+          </div>
+          <div class="alert alert-blue" id="tenancy-note" style="margin-bottom:0;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3 — due months -->
+    <section class="step locked" id="step-3">
+      <div class="step-head">
+        <span class="step-no">3</span>
+        <div>
+          <h2>Which rent months are being paid?</h2>
+          <div class="d">Only finished, unpaid months are payable. Oldest months must be cleared first.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div id="due-alert"></div>
+        <div id="month-list"></div>
+        <div id="upcoming-note"></div>
+      </div>
+    </section>
+
+    <!-- STEP 4 — method -->
+    <section class="step locked" id="step-4">
+      <div class="step-head">
+        <span class="step-no">4</span>
+        <div>
+          <h2>Payment details</h2>
+          <div class="d">How was the rent received? All fields for the chosen method are required.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="grid-2" style="gap:10px;" id="method-cards">
+          <label class="radio-card">
+            <input type="radio" name="method" value="cash">
+            <div><div class="t">Cash</div><div class="d">Received in hand by a staff member</div></div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="method" value="bank">
+            <div><div class="t">Bank transfer</div><div class="d">NEFT / RTGS / cheque deposit</div></div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="method" value="bkash">
+            <div><div class="t">Bkash</div><div class="d">Mobile wallet transfer</div></div>
+          </label>
+          <label class="radio-card" id="deposit-card">
+            <input type="radio" name="method" value="deposit">
+            <div><div class="t">Security deposit</div><div class="d">Apply the move-in deposit to final months' rent</div></div>
+          </label>
+        </div>
+
+        <div class="method-fields" id="mf-cash" hidden>
+          <div class="form-grid">
+            <div class="field"><label>Name of person who received the cash *</label><input class="input" data-det="received_by"></div>
+            <div class="field"><label>Date received *</label><input class="input" type="date" data-det="received_date" value="{{ today|date:'Y-m-d' }}"></div>
+          </div>
+        </div>
+
+        <div class="method-fields" id="mf-bank" hidden>
+          <div class="form-grid">
+            <div class="field"><label>Sender's bank *</label>
+              <select class="select" data-det="sender_bank">
+                <option value="">— Select —</option>
+                <option>City Bank</option><option>BRAC Bank</option><option>Dutch-Bangla Bank</option>
+                <option>Eastern Bank</option><option>Islami Bank</option><option>Sonali Bank</option><option>Other</option>
+              </select>
+            </div>
+            <div class="field"><label>Receiving bank *</label>
+              <select class="select" data-det="receiving_bank">
+                <option value="">— Select —</option>
+                <option>City Bank — RentFlow A/C 1401-2233-4455</option>
+                <option>BRAC Bank — RentFlow A/C 2044-5566-7788</option>
+              </select>
+            </div>
+            <div class="field"><label>Transaction reference no. *</label><input class="input" data-det="reference_no"></div>
+            <div class="field"><label>Transfer date *</label><input class="input" type="date" data-det="transfer_date" value="{{ today|date:'Y-m-d' }}"></div>
+            <div class="field"><label>Cheque no. (optional)</label><input class="input" data-det="cheque_no"></div>
+          </div>
+        </div>
+
+        <div class="method-fields" id="mf-bkash" hidden>
+          <div class="form-grid">
+            <div class="field"><label>Bkash transaction ID *</label><input class="input" data-det="bkash_txn_id" placeholder="e.g. 9HK2L4M7XA"></div>
+            <div class="field"><label>Sender's Bkash number *</label><input class="input" data-det="sender_bkash_no" placeholder="01XXXXXXXXX"></div>
+            <div class="field"><label>Transaction date &amp; time *</label><input class="input" type="datetime-local" data-det="txn_datetime"></div>
+            <div class="field"><label>Screenshot (optional)</label><input class="input" type="file" id="bkash-shot" accept="image/*"></div>
+          </div>
+        </div>
+
+        <div class="method-fields" id="mf-deposit" hidden>
+          <div class="deposit-box" id="deposit-info"></div>
+          <div id="topup-block" hidden>
+            <div class="alert alert-amber" style="margin-top:14px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+              <div>
+                <b>Rent has increased since move-in.</b>
+                The deposit covers the <em>original</em> contract rent only. The increased portion of
+                <b id="topup-amount"></b> must be paid separately now.
+              </div>
+            </div>
+            <div class="field">
+              <label>Top-up payment method *</label>
+              <select class="select" id="topup-method">
+                <option value="">— Select —</option>
+                <option value="cash">Cash</option>
+                <option value="bank">Bank transfer</option>
+                <option value="bkash">Bkash</option>
+              </select>
+            </div>
+            <div class="form-grid" id="tf-cash" hidden>
+              <div class="field"><label>Received by *</label><input class="input" data-tdet="received_by"></div>
+              <div class="field"><label>Date received *</label><input class="input" type="date" data-tdet="received_date" value="{{ today|date:'Y-m-d' }}"></div>
+            </div>
+            <div class="form-grid" id="tf-bank" hidden>
+              <div class="field"><label>Sender's bank *</label><input class="input" data-tdet="sender_bank"></div>
+              <div class="field"><label>Receiving bank *</label><input class="input" data-tdet="receiving_bank"></div>
+              <div class="field"><label>Reference no. *</label><input class="input" data-tdet="reference_no"></div>
+              <div class="field"><label>Transfer date *</label><input class="input" type="date" data-tdet="transfer_date" value="{{ today|date:'Y-m-d' }}"></div>
+            </div>
+            <div class="form-grid" id="tf-bkash" hidden>
+              <div class="field"><label>Bkash transaction ID *</label><input class="input" data-tdet="bkash_txn_id"></div>
+              <div class="field"><label>Sender's Bkash number *</label><input class="input" data-tdet="sender_bkash_no"></div>
+              <div class="field"><label>Date &amp; time *</label><input class="input" type="datetime-local" data-tdet="txn_datetime"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:16px;" id="amount-field" hidden>
+          <label>Amount received *</label>
+          <input class="input" id="f-amount" type="number" step="0.01" min="0">
+          <div class="hint">Must equal the total rent for the selected month(s). Auto-filled — verify against what was actually received.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 5 — verify & generate -->
+    <section class="step locked" id="step-5">
+      <div class="step-head">
+        <span class="step-no">5</span>
+        <div>
+          <h2>Verify &amp; generate the invoice</h2>
+          <div class="d">RentFlow checks amounts, tenancy and method details before generating anything.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div id="verify-out"></div>
+        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btn-verify" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+            Run auto-check
+          </button>
+          <button class="btn btn-accent" id="btn-preview" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 3v5h5M7 3h7l5 5v13H7z"/></svg>
+            Preview invoice
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Summary rail -->
+  <aside class="summary-rail">
+    <div class="panel glass rise rise-2">
+      <div class="panel-head"><h2>Payment summary</h2></div>
+      <div class="panel-body" id="summary-body">
+        <div class="empty" style="padding:28px 10px;">
+          Select a building and flat to begin.
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-body small muted">
+        <b style="color:var(--navy-900);">How post-paid billing works</b><br>
+        A tenancy starting 1 August owes rent <em>for</em> August, but pays it between
+        1–20 September. Each month you always collect the previous month's rent —
+        the running month is never charged upfront.
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Invoice preview modal -->
+<div class="modal-backdrop" id="invoice-modal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head">
+      <h2>Invoice preview</h2>
+      <button class="x" onclick="rfModal.close('invoice-modal')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="inv-preview" id="inv-preview"></div>
+      <div class="field" style="margin-top:16px;">
+        <label>Send invoice to email</label>
+        <input class="input" type="email" id="inv-email">
+        <label class="check-row checked" style="margin-top:10px;">
+          <input type="checkbox" id="inv-send-email" checked>
+          <span>Email the PDF invoice to the occupant</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="rfModal.close('invoice-modal')">Back</button>
+      <button class="btn btn-accent" id="btn-generate">
+        <span id="gen-label">Generate &amp; send</span>
+        <span class="spinner" id="gen-spin" hidden></span>
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>window.RF_PRESELECT_FLAT = "{{ preselect_flat }}";</script>
+<script src="{% static 'js/payment-logic.js' %}"></script>
+{% endblock %}
