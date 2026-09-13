@@ -23,6 +23,7 @@ if getattr(sys, "frozen", False):
 
 sys.path.insert(0, str(BASE_DIR))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+os.environ.setdefault("RENTFLOW_DESKTOP", "1")  # local http → Lax cookies
 
 import django  # noqa: E402
 

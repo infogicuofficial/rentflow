@@ -49,6 +49,23 @@ MIDDLEWARE = [
 
 X_FRAME_OPTIONS = "ALLOWALL"  # allows the desktop webview / preview iframe
 
+# Cookie policy:
+#  * Web/preview mode runs behind an HTTPS proxy inside an iframe — browsers
+#    only send cookies there with SameSite=None; Secure.
+#  * Desktop mode (RENTFLOW_DESKTOP=1, plain http://127.0.0.1) cannot use
+#    Secure cookies, so it falls back to the standard Lax policy.
+if os.environ.get("RENTFLOW_DESKTOP") == "1":
+    SESSION_COOKIE_SAMESITE = "Lax"
+    CSRF_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+else:
+    SESSION_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SAMESITE = "None"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
