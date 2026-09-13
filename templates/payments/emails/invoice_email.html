@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0; padding:0; background:#f0f2f5; font-family:Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f5; padding:28px 0;">
+  <tr><td align="center">
+    <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:10px; overflow:hidden; border:1px solid #e5e8ed;">
+      <tr>
+        <td style="background:#16305c; padding:22px 30px;">
+          <span style="color:#ffffff; font-size:20px; font-weight:bold;">Rent<span style="color:#e46f2e;">Flow</span></span>
+          <span style="color:#c7d2e6; font-size:12px; float:right; padding-top:6px;">{{ invoice.number }}</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:28px 30px 8px;">
+          <p style="font-size:15px; color:#1a1d23; margin:0 0 6px;"><b>Dear {{ occupant.full_name }},</b></p>
+          <p style="font-size:13px; color:#40454e; line-height:1.6; margin:0 0 18px;">
+            Thank you — your rent payment has been received and recorded.
+            Your official invoice is attached as a PDF. A summary is below.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e8ed; border-radius:6px;">
+            {% for p in payments %}
+            <tr>
+              <td style="padding:10px 14px; font-size:13px; color:#1a1d23; border-bottom:1px solid #f0f2f5;">{{ p.period_month|date:"F Y" }} rent — {{ p.get_method_display }}</td>
+              <td style="padding:10px 14px; font-size:13px; color:#1a1d23; text-align:right; border-bottom:1px solid #f0f2f5;"><b>BDT {{ p.amount|floatformat:2 }}</b></td>
+            </tr>
+            {% endfor %}
+            <tr>
+              <td style="padding:12px 14px; font-size:14px; color:#16305c;"><b>Total received</b></td>
+              <td style="padding:12px 14px; font-size:14px; color:#e46f2e; text-align:right;"><b>BDT {{ total|floatformat:2 }}</b></td>
+            </tr>
+          </table>
+          <p style="font-size:12px; color:#6b7280; line-height:1.6; margin:18px 0 0;">
+            Reminder: billing is post-paid — each month's rent is payable between the 1st and 20th of the following month.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:22px 30px 28px;">
+          <p style="font-size:11px; color:#9aa0ab; margin:0; line-height:1.6;">
+            {{ company.name }} · {{ company.address }}<br>
+            {{ company.phone }} · {{ company.email }}<br>
+            Bank: {{ company.bank }}
+          </p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

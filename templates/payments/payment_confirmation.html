@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}Payment confirmed{% endblock %}
+{% block breadcrumbs %}
+<span class="sep">/</span><a href="{% url 'payments:main' %}">Payments</a>
+<span class="sep">/</span><span class="here">Confirmation</span>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:640px; margin:0 auto;">
+  <div class="panel rise" style="text-align:center; padding:36px 30px 30px;">
+    <div style="width:58px;height:58px;border-radius:50%;background:var(--green-100);color:var(--green-600);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <h1 style="margin-bottom:6px;">Payment recorded</h1>
+    <p class="muted">Invoice <b class="mono">{{ invoice.number }}</b> was generated on {{ invoice.generated_at|date:"d F Y, H:i" }}.
+    {% if invoice.email_sent %}A copy was emailed to <b>{{ invoice.emailed_to }}</b>.{% endif %}</p>
+
+    <div class="panel" style="margin:22px 0; text-align:left;">
+      <div class="panel-body">
+        <dl class="kv">
+          <dt>Occupant</dt><dd>{{ first.occupancy.occupant.full_name }}</dd>
+          <dt>Property</dt><dd>Flat {{ first.occupancy.flat.number }}, Building {{ first.occupancy.flat.building.number }}</dd>
+          {% for p in payments %}
+          <dt>{{ p.period_label }}</dt>
+          <dd>৳ {{ p.amount|floatformat:2|intcomma }} — {{ p.get_method_display }}
+            {% if p.deposit_applied > 0 %}<br><span class="small muted">from deposit: ৳ {{ p.deposit_applied|floatformat:2|intcomma }}{% if p.topup_amount > 0 %} · increase top-up: ৳ {{ p.topup_amount|floatformat:2|intcomma }} via {{ p.get_topup_method_display }}{% endif %}</span>{% endif %}
+          </dd>
+          {% endfor %}
+          <dt>Total</dt><dd style="color:var(--orange-600); font-size:15px;">৳ {{ invoice.total_amount|floatformat:2|intcomma }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+      {% if invoice.pdf %}
+      <a class="btn btn-primary" href="{{ invoice.pdf.url }}" target="_blank">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>
+        Download PDF
+      </a>
+      <a class="btn btn-outline" href="{{ invoice.pdf.url }}" target="_blank" onclick="setTimeout(()=>window.print,0)">Print invoice</a>
+      {% endif %}
+      <a class="btn btn-outline" href="{% url 'dashboard:home' %}">Back to dashboard</a>
+      <a class="btn btn-ghost" href="{% url 'payments:make_payment' %}">Record another</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}Occupants{% endblock %}
+{% block breadcrumbs %}<span class="sep">/</span><span class="here">Occupants</span>{% endblock %}
+
+{% block content %}
+<div class="page-head rise">
+  <div>
+    <h1>Occupants</h1>
+    <p class="sub">{{ occupants|length }} registered occupant{{ occupants|length|pluralize }}.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'properties:occupant_new' %}">Add occupant</a>
+</div>
+
+<form class="panel glass filter-bar rise rise-1" method="get">
+  <input class="input search" type="search" name="q" value="{{ q }}" placeholder="Search by name, ID, email or phone…">
+  <button class="btn btn-primary" type="submit">Search</button>
+  {% if q %}<a class="btn btn-ghost" href="{% url 'properties:occupant_list' %}">Clear</a>{% endif %}
+</form>
+
+<div class="panel rise rise-2">
+  <div class="panel-body flush table-wrap">
+    <table class="table">
+      <thead><tr><th>Occupant</th><th>ID</th><th>Contact</th><th>Current property</th><th class="num">Rent</th><th></th></tr></thead>
+      <tbody>
+        {% for o in occupants %}
+        <tr>
+          <td style="font-weight:700;">{{ o.full_name }}</td>
+          <td class="mono">{{ o.occupant_id }}</td>
+          <td>{{ o.phone }}<br><span class="small muted">{{ o.email }}</span></td>
+          <td>
+            {% with occ=o.current_occupancy %}
+            {% if occ %}Flat {{ occ.flat.number }}, Bld {{ occ.flat.building.number }}{% else %}<span class="muted">—</span>{% endif %}
+            {% endwith %}
+          </td>
+          <td class="num">
+            {% with occ=o.current_occupancy %}
+            {% if occ %}৳ {{ occ.current_rent|floatformat:0|intcomma }}{% else %}—{% endif %}
+            {% endwith %}
+          </td>
+          <td><a class="btn btn-sm btn-ghost" href="{% url 'properties:client_info' o.pk %}">Profile</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty">No occupants found.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

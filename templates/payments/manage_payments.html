@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}Payment history{% endblock %}
+{% block breadcrumbs %}
+<span class="sep">/</span><a href="{% url 'payments:main' %}">Payments</a>
+<span class="sep">/</span><span class="here">History</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-head rise">
+  <div>
+    <h1>Payment history</h1>
+    <p class="sub">Every recorded payment with its invoice, method details and status.</p>
+  </div>
+</div>
+
+<div class="stat-row rise rise-1">
+  <div class="stat"><span class="k">Total collections</span><span class="v">৳ {{ agg.total|default:0|floatformat:0|intcomma }}</span><span class="s">for the current filter</span></div>
+  <div class="stat"><span class="k">Payments</span><span class="v">{{ agg.n|default:0 }}</span><span class="s">records matched</span></div>
+  <div class="stat"><span class="k">Average value</span><span class="v">৳ {{ agg.avg|default:0|floatformat:0|intcomma }}</span><span class="s">per payment</span></div>
+  <div class="stat accent"><span class="k">Collection rate</span><span class="v">{{ collection_rate }}%</span><span class="s">paid vs recorded</span></div>
+</div>
+
+<form class="panel glass filter-bar rise rise-2" method="get">
+  <input class="input search" type="search" name="q" value="{{ filters.q }}" placeholder="Search occupant, flat, ID or invoice no…">
+  <select class="select" name="building">
+    <option value="">All buildings</option>
+    {% for b in buildings %}<option value="{{ b.pk }}" {% if filters.building == b.pk|stringformat:"s" %}selected{% endif %}>Bld {{ b.number }}</option>{% endfor %}
+  </select>
+  <select class="select" name="status">
+    <option value="">All statuses</option>
+    <option value="paid" {% if filters.status == "paid" %}selected{% endif %}>Paid</option>
+    <option value="pending" {% if filters.status == "pending" %}selected{% endif %}>Pending</option>
+    <option value="overdue" {% if filters.status == "overdue" %}selected{% endif %}>Overdue</option>
+  </select>
+  <select class="select" name="method">
+    <option value="">All methods</option>
+    <option value="cash" {% if filters.method == "cash" %}selected{% endif %}>Cash</option>
+    <option value="bank" {% if filters.method == "bank" %}selected{% endif %}>Bank</option>
+    <option value="bkash" {% if filters.method == "bkash" %}selected{% endif %}>Bkash</option>
+    <option value="deposit" {% if filters.method == "deposit" %}selected{% endif %}>Deposit</option>
+  </select>
+  <input class="input" type="date" name="from" value="{{ filters.from }}" title="From date">
+  <input class="input" type="date" name="to" value="{{ filters.to }}" title="To date">
+  <button class="btn btn-primary" type="submit">Filter</button>
+  <a class="btn btn-ghost" href="{% url 'payments:manage' %}">Reset</a>
+</form>
+
+<div class="pay-layout">
+  <div class="panel rise rise-3">
+    <div class="panel-body flush table-wrap">
+      <table class="table" id="pay-table">
+        <thead>
+          <tr>
+            <th>Invoice</th><th>Occupant</th><th>Flat / Bld</th><th>Period</th>
+            <th class="num">Amount</th><th>Date</th><th>Method</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in payments %}
+          <tr class="clickable" data-detail='{
+            "invoice": "{{ p.invoice.number|default:"—" }}",
+            "invoice_id": "{{ p.invoice.pk|default:"" }}",
+            "pdf": "{{ p.invoice.pdf.url|default:"" }}",
+            "name": "{{ p.occupancy.occupant.full_name|escapejs }}",
+            "phone": "{{ p.occupancy.occupant.phone|escapejs }}",
+            "email": "{{ p.occupancy.occupant.email|escapejs }}",
+            "flat": "Flat {{ p.occupancy.flat.number }}, Bld {{ p.occupancy.flat.building.number }}",
+            "period": "{{ p.period_label }}",
+            "amount": "{{ p.amount }}",
+            "deposit_applied": "{{ p.deposit_applied }}",
+            "topup": "{{ p.topup_amount }}",
+            "date": "{{ p.payment_date|date:"d M Y" }}",
+            "due": "{{ p.due_date|date:"d M Y" }}",
+            "method": "{{ p.get_method_display }}{% if p.topup_method %} + {{ p.get_topup_method_display }} top-up{% endif %}",
+            "status": "{{ p.status }}",
+            "details": {{ p.details_json }},
+            "pid": "{{ p.pk }}"
+          }'>
+            <td class="mono">{{ p.invoice.number|default:"—" }}</td>
+            <td style="font-weight:700;">{{ p.occupancy.occupant.full_name }}</td>
+            <td>{{ p.occupancy.flat.number }} / {{ p.occupancy.flat.building.number }}</td>
+            <td>{{ p.period_label }}</td>
+            <td class="num" style="font-weight:700;">৳ {{ p.amount|floatformat:0|intcomma }}</td>
+            <td>{{ p.payment_date|date:"d M Y" }}</td>
+            <td>{{ p.get_method_display }}</td>
+            <td><span class="badge badge-{{ p.status }}">{{ p.get_status_display }}</span></td>
+            <td><button class="btn btn-sm btn-ghost" type="button">View</button></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9"><div class="empty">No payments match the current filter.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <aside class="detail-rail panel rise rise-4" id="detail-rail">
+    <div class="placeholder">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 10px; display:block;"><path d="M14 3v5h5M7 3h7l5 5v13H7z"/><path d="M10 13h5M10 17h5"/></svg>
+      Select a payment row to see its full record.
+    </div>
+  </aside>
+</div>
+
+<!-- delete confirm modal -->
+<div class="modal-backdrop" id="del-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head"><h2>Delete payment?</h2>
+      <button class="x" onclick="rfModal.close('del-modal')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="small">This removes the payment record and re-opens the rent month as unpaid. If it was settled from the security deposit, the deposit balance is restored.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="rfModal.close('del-modal')">Cancel</button>
+      <form method="post" id="del-form">{% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete payment</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const rail = document.getElementById("detail-rail");
+  document.querySelectorAll("#pay-table tbody tr.clickable").forEach((tr) => {
+    tr.addEventListener("click", () => {
+      const d = JSON.parse(tr.dataset.detail);
+      document.querySelectorAll("#pay-table tr").forEach((r) => r.style.background = "");
+      tr.style.background = "var(--navy-50)";
+      const detailRows = Object.entries(d.details || {})
+        .filter(([, v]) => v)
+        .map(([k, v]) => `<div class="row" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--gray-200);font-size:12.5px;">
+          <span class="muted">${k.replace(/_/g, " ")}</span><span style="font-weight:600;">${v}</span></div>`).join("");
+      rail.innerHTML = `
+        <div class="panel-head"><h2>${d.invoice}</h2>
+          <span class="badge badge-${d.status}">${d.status}</span></div>
+        <div class="panel-body">
+          <dl class="kv">
+            <dt>Occupant</dt><dd>${d.name}</dd>
+            <dt>Contact</dt><dd>${d.phone}<br><span class="small muted">${d.email}</span></dd>
+            <dt>Property</dt><dd>${d.flat}</dd>
+            <dt>Rent period</dt><dd>${d.period}</dd>
+            <dt>Amount</dt><dd>${rfMoney(d.amount)}</dd>
+            ${Number(d.deposit_applied) > 0 ? `<dt>From deposit</dt><dd>${rfMoney(d.deposit_applied)}</dd>` : ""}
+            ${Number(d.topup) > 0 ? `<dt>Increase top-up</dt><dd>${rfMoney(d.topup)}</dd>` : ""}
+            <dt>Paid on</dt><dd>${d.date}</dd>
+            <dt>Was due</dt><dd>${d.due}</dd>
+            <dt>Method</dt><dd>${d.method}</dd>
+          </dl>
+          ${detailRows ? `<hr class="divider"><b class="small" style="color:var(--navy-900)">METHOD DETAILS</b>${detailRows}` : ""}
+          <hr class="divider">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            ${d.pdf ? `<a class="btn btn-outline" href="${d.pdf}" target="_blank">Download invoice PDF</a>` : ""}
+            ${d.invoice_id ? `
+            <form method="post" action="/payments/invoice/${d.invoice_id}/resend/">
+              <input type="hidden" name="csrfmiddlewaretoken" value="${rfCsrf()}">
+              <button class="btn btn-outline" style="width:100%;" type="submit">Resend invoice email</button>
+            </form>` : ""}
+            <button class="btn btn-danger" type="button" onclick="askDelete('${d.pid}')">Delete payment</button>
+          </div>
+        </div>`;
+    });
+  });
+  window.askDelete = function (pid) {
+    document.getElementById("del-form").action = `/payments/payment/${pid}/delete/`;
+    rfModal.open("del-modal");
+  };
+})();
+</script>
+{% endblock %}

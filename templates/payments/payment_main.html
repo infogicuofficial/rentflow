@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}Payments hub{% endblock %}
+{% block breadcrumbs %}<span class="sep">/</span><span class="here">Payments</span>{% endblock %}
+
+{% block content %}
+<div class="page-head rise">
+  <div>
+    <h1>Payments hub</h1>
+    <p class="sub">Record rent, review history and clear what's outstanding. Billing is post-paid — this month you collect last month's rent.</p>
+  </div>
+</div>
+
+<div class="stat-row rise rise-1">
+  <div class="stat green">
+    <span class="k">Collected this month</span>
+    <span class="v">৳ {{ stats.this_month|floatformat:0|intcomma }}</span>
+    <span class="s">{{ stats.count_this_month }} payment{{ stats.count_this_month|pluralize }}</span>
+  </div>
+  <div class="stat red">
+    <span class="k">Overdue months</span>
+    <span class="v">{{ overdue_count }}</span>
+    <span class="s">past the 20th deadline</span>
+  </div>
+  <div class="stat accent">
+    <span class="k">Payable now</span>
+    <span class="v">{{ due_count }}</span>
+    <span class="s">within the 1st–20th window</span>
+  </div>
+</div>
+
+<div class="grid-3 rise rise-2" style="margin-bottom:22px;">
+  <a class="panel" href="{% url 'payments:make_payment' %}" style="display:flex; gap:14px; align-items:center; padding:20px; transition:box-shadow .18s;">
+    <div style="width:44px;height:44px;border-radius:10px;background:var(--orange-100);color:var(--orange-600);display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    </div>
+    <div>
+      <div style="font-weight:700;color:var(--navy-900);">Create new invoice</div>
+      <div class="small muted">Record a payment and generate the PDF invoice</div>
+    </div>
+  </a>
+  <a class="panel" href="{% url 'payments:manage' %}" style="display:flex; gap:14px; align-items:center; padding:20px;">
+    <div style="width:44px;height:44px;border-radius:10px;background:var(--navy-100);color:var(--navy-700);display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    </div>
+    <div>
+      <div style="font-weight:700;color:var(--navy-900);">Payment history</div>
+      <div class="small muted">Search, filter and export past collections</div>
+    </div>
+  </a>
+  <a class="panel" href="{% url 'dashboard:home' %}" style="display:flex; gap:14px; align-items:center; padding:20px;">
+    <div style="width:44px;height:44px;border-radius:10px;background:var(--green-100);color:var(--green-600);display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
+    </div>
+    <div>
+      <div style="font-weight:700;color:var(--navy-900);">Payment statistics</div>
+      <div class="small muted">Charts and trends on the dashboard</div>
+    </div>
+  </a>
+</div>
+
+<div class="grid-2">
+  <div class="panel rise rise-3">
+    <div class="panel-head">
+      <h2 style="color:var(--red-600);">Overdue warnings</h2>
+      <span class="badge badge-red">{{ overdue_count }}</span>
+    </div>
+    <div class="panel-body">
+      {% for r in overdue_rows %}
+      <div class="due-strip">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;">{{ r.occ.occupant.full_name }} — {{ r.m.label }}</div>
+          <div class="small muted">Flat {{ r.occ.flat.number }}, Bld {{ r.occ.flat.building.number }} · ৳ {{ r.m.rent|floatformat:0|intcomma }} · was due {{ r.m.due_date|date:"d M Y" }}</div>
+        </div>
+        <span class="days">{{ r.m.days_overdue }}d</span>
+        <a class="btn btn-sm btn-primary" href="{% url 'payments:make_payment' %}?flat={{ r.occ.flat_id }}">Collect</a>
+      </div>
+      {% empty %}
+      <div class="empty">No overdue rent. Excellent.</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel rise rise-4">
+    <div class="panel-head">
+      <h2>Pending — payable this month</h2>
+      <span class="badge badge-amber">{{ due_count }}</span>
+    </div>
+    <div class="panel-body">
+      {% for r in due_rows %}
+      <div class="due-strip warn">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;">{{ r.occ.occupant.full_name }} — {{ r.m.label }}</div>
+          <div class="small muted">Flat {{ r.occ.flat.number }} · ৳ {{ r.m.rent|floatformat:0|intcomma }} · due {{ r.m.due_date|date:"d M Y" }}</div>
+        </div>
+        <a class="btn btn-sm btn-outline" href="{% url 'payments:make_payment' %}?flat={{ r.occ.flat_id }}">Collect</a>
+      </div>
+      {% empty %}
+      <div class="empty">Nothing pending inside the current window.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

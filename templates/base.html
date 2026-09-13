@@ -1,0 +1,112 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}RentFlow{% endblock %} · RentFlow</title>
+  <link rel="icon" href="{% static 'images/logo/rentflow-mark.png' %}">
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/animations.css' %}">
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/payments.css' %}">
+  <link rel="stylesheet" href="{% static 'css/properties.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="{% static 'images/logo/rentflow-mark.png' %}" alt="RentFlow">
+      <div class="name">Rent<span>Flow</span></div>
+    </div>
+    <nav class="side-nav">
+      <div class="group-label">Overview</div>
+      <a class="side-link {% if request.resolver_match.view_name == 'dashboard:home' %}active{% endif %}" href="{% url 'dashboard:home' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+        <span class="txt">Dashboard</span>
+      </a>
+      <div class="group-label">Properties</div>
+      <a class="side-link {% if request.resolver_match.view_name == 'properties:overview' or request.resolver_match.view_name == 'properties:flat_detail' %}active{% endif %}" href="{% url 'properties:overview' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h2M13 16h2"/></svg>
+        <span class="txt">Rental overview</span>
+      </a>
+      <a class="side-link {% if 'occupant' in request.resolver_match.view_name or request.resolver_match.view_name == 'properties:client_info' %}active{% endif %}" href="{% url 'properties:occupant_list' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.7-3 2.9-4.6 5.5-4.6s4.8 1.6 5.5 4.6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.6 14.7c2.4.2 4.1 1.6 4.9 4.3"/></svg>
+        <span class="txt">Occupants</span>
+      </a>
+      <div class="group-label">Finance</div>
+      <a class="side-link {% if request.resolver_match.view_name == 'payments:main' %}active{% endif %}" href="{% url 'payments:main' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
+        <span class="txt">Payments hub</span>
+      </a>
+      <a class="side-link {% if request.resolver_match.view_name == 'payments:make_payment' %}active{% endif %}" href="{% url 'payments:make_payment' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+        <span class="txt">Record payment</span>
+      </a>
+      <a class="side-link {% if request.resolver_match.view_name == 'payments:manage' %}active{% endif %}" href="{% url 'payments:manage' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <span class="txt">Payment history</span>
+      </a>
+      <div class="group-label">System</div>
+      <a class="side-link" href="/admin/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h0a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55h0a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v0a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
+        <span class="txt">Administration</span>
+      </a>
+    </nav>
+    <div class="sidebar-foot">RentFlow · Property suite</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="burger" id="nav-burger" aria-label="Toggle navigation">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <nav class="crumbs">
+        <a href="{% url 'dashboard:home' %}">Home</a>
+        {% block breadcrumbs %}{% endblock %}
+      </nav>
+      <div class="topbar-right">
+        {% block quick_actions %}
+        <a class="btn btn-accent btn-sm" href="{% url 'payments:make_payment' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+          Record payment
+        </a>
+        {% endblock %}
+        {% if user.is_authenticated %}
+        <div class="user-chip" id="user-chip">
+          <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
+          <span class="small" style="font-weight:700">{{ user.get_full_name|default:user.username }}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+          <div class="user-menu">
+            <a href="/admin/">Django admin</a>
+            <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+              <button type="submit">Sign out</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="content">
+      {% for m in messages %}
+        <div data-django-message data-text="{{ m|escapejs }}" data-level="{% if m.tags == 'error' %}error{% elif m.tags == 'success' %}success{% elif m.tags == 'warning' %}warning{% endif %}"></div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+      <span>© {% now "Y" %} RentFlow Property Management. All rights reserved.</span>
+      <span>Post-paid billing · rent for a month is collected the following month.</span>
+    </footer>
+  </div>
+</div>
+
+<div class="toast-zone"></div>
+<script src="{% static 'js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

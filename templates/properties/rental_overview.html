@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}Rental overview{% endblock %}
+{% block breadcrumbs %}<span class="sep">/</span><span class="here">Properties</span>{% endblock %}
+
+{% block content %}
+<div class="page-head rise">
+  <div>
+    <h1>Rental overview</h1>
+    <p class="sub">{{ counts.total }} unit{{ counts.total|pluralize }} · {{ counts.occupied }} occupied · {{ counts.vacant }} vacant{% if counts.overdue %} · <b style="color:var(--red-600);">{{ counts.overdue }} overdue</b>{% endif %}</p>
+  </div>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <div class="view-toggle" id="view-toggle">
+      <button type="button" data-mode="grid" class="{% if view_mode == 'grid' %}active{% endif %}" title="Grid view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+      <button type="button" data-mode="list" class="{% if view_mode == 'list' %}active{% endif %}" title="List view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <a class="btn btn-primary" href="/admin/properties/flat/add/" target="_blank">Add unit</a>
+  </div>
+</div>
+
+<form class="panel glass filter-bar rise rise-1" method="get">
+  <input class="input search" type="search" name="q" value="{{ filters.q }}" placeholder="Search flat no, building or occupant name…">
+  <select class="select" name="building">
+    <option value="">All buildings</option>
+    {% for b in buildings %}<option value="{{ b.pk }}" {% if filters.building == b.pk|stringformat:"s" %}selected{% endif %}>Bld {{ b.number }} — {{ b.name }}</option>{% endfor %}
+  </select>
+  <select class="select" name="status">
+    <option value="">Occupied &amp; vacant</option>
+    <option value="occupied" {% if filters.status == "occupied" %}selected{% endif %}>Occupied only</option>
+    <option value="vacant" {% if filters.status == "vacant" %}selected{% endif %}>Vacant only</option>
+  </select>
+  <button class="btn btn-primary" type="submit">Apply</button>
+  <a class="btn btn-ghost" href="{% url 'properties:overview' %}">Reset</a>
+</form>
+
+<div class="unit-grid rise rise-2" id="grid-view" {% if view_mode == 'list' %}hidden{% endif %}>
+  {% for r in rows %}
+  <div class="unit-card">
+    <div class="band {{ r.state }}"></div>
+    <div class="body">
+      <div class="loc">Bld {{ r.flat.building.number }} · Level {{ r.flat.level.number }} · {{ r.flat.get_unit_type_display }}</div>
+      <div class="flat-no">Flat {{ r.flat.number }}</div>
+      {% if r.occ %}
+      <div class="who">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1-3.6 3.7-5.4 7-5.4s6 1.8 7 5.4"/></svg>
+        {{ r.occ.occupant.full_name }}
+      </div>
+      <div class="rent">৳ {{ r.occ.current_rent|floatformat:0|intcomma }} / month</div>
+      {% else %}
+      <div class="who muted">No current occupant</div>
+      <div class="rent muted">Listed at ৳ {{ r.flat.base_rent|floatformat:0|intcomma }}</div>
+      {% endif %}
+    </div>
+    <div class="foot">
+      {% if r.state == "paid" %}<span class="badge badge-paid">Paid up</span>
+      {% elif r.state == "due" %}<span class="badge badge-due">Due soon</span>
+      {% elif r.state == "overdue" %}<span class="badge badge-overdue">Overdue</span>
+      {% else %}<span class="badge badge-vacant">Vacant</span>{% endif %}
+      <div class="links">
+        <a href="{% url 'properties:flat_detail' r.flat.pk %}">Details</a>
+        {% if r.occ %}<a href="{% url 'payments:make_payment' %}?flat={{ r.flat.pk }}">Payment</a>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="empty" style="grid-column:1/-1;">No units match this filter.</div>
+  {% endfor %}
+</div>
+
+<div class="panel rise rise-2" id="list-view" {% if view_mode != 'list' %}hidden{% endif %}>
+  <div class="panel-body flush table-wrap">
+    <table class="table">
+      <thead><tr><th>Building</th><th>Level</th><th>Flat</th><th>Type</th><th>Occupant</th><th class="num">Rent</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.flat.building.number }} — {{ r.flat.building.name }}</td>
+          <td>{{ r.flat.level.number }}</td>
+          <td style="font-weight:700;">{{ r.flat.number }}</td>
+          <td>{{ r.flat.get_unit_type_display }}</td>
+          <td>{% if r.occ %}{{ r.occ.occupant.full_name }}{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="num">{% if r.occ %}৳ {{ r.occ.current_rent|floatformat:0|intcomma }}{% else %}<span class="muted">৳ {{ r.flat.base_rent|floatformat:0|intcomma }}</span>{% endif %}</td>
+          <td>
+            {% if r.state == "paid" %}<span class="badge badge-paid">Paid up</span>
+            {% elif r.state == "due" %}<span class="badge badge-due">Due soon</span>
+            {% elif r.state == "overdue" %}<span class="badge badge-overdue">Overdue</span>
+            {% else %}<span class="badge badge-vacant">Vacant</span>{% endif %}
+          </td>
+          <td>
+            <a class="btn btn-sm btn-ghost" href="{% url 'properties:flat_detail' r.flat.pk %}">View</a>
+            {% if r.occ %}<a class="btn btn-sm btn-outline" href="{% url 'payments:make_payment' %}?flat={{ r.flat.pk }}">Payment</a>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll("#view-toggle button").forEach((b) => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll("#view-toggle button").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active");
+    document.getElementById("grid-view").hidden = b.dataset.mode !== "grid";
+    document.getElementById("list-view").hidden = b.dataset.mode !== "list";
+    const u = new URL(window.location); u.searchParams.set("view", b.dataset.mode);
+    history.replaceState(null, "", u);
+  });
+});
+</script>
+{% endblock %}

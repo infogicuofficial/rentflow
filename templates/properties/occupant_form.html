@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{% if occupant %}Edit {{ occupant.full_name }}{% else %}New occupant{% endif %}{% endblock %}
+{% block breadcrumbs %}
+<span class="sep">/</span><a href="{% url 'properties:occupant_list' %}">Occupants</a>
+<span class="sep">/</span><span class="here">{% if occupant %}Edit{% else %}New{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:720px; margin:0 auto;">
+  <div class="page-head rise">
+    <div>
+      <h1>{% if occupant %}Edit occupant{% else %}Register a new occupant{% endif %}</h1>
+      <p class="sub">Personal details, contact information and identity references. Fields marked * are required.</p>
+    </div>
+  </div>
+  <form class="panel rise rise-1" method="post" enctype="multipart/form-data">
+    <div class="panel-body">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert-red">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="form-grid">
+        {% for f in form %}
+        <div class="field {% if f.name == 'notes' %}wide{% endif %}" {% if f.name == 'notes' %}style="grid-column:1/-1;"{% endif %}>
+          <label>{{ f.label }}{% if f.field.required %} *{% endif %}</label>
+          {{ f }}
+          {% if f.help_text %}<div class="hint">{{ f.help_text }}</div>{% endif %}
+          {% if f.errors %}<div class="hint" style="color:var(--red-600);">{{ f.errors|striptags }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="modal-foot" style="border-radius:0 0 10px 10px;">
+      <a class="btn btn-outline" href="{% url 'properties:occupant_list' %}">Cancel</a>
+      <button class="btn btn-primary" type="submit">Save occupant</button>
+    </div>
+  </form>
+</div>
+<style>
+  form .form-grid input, form .form-grid select, form .form-grid textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--gray-300);
+    border-radius: 6px; font: 400 13.5px var(--font);
+  }
+  form .form-grid input:focus, form .form-grid textarea:focus {
+    outline: none; border-color: var(--navy-600); box-shadow: 0 0 0 3px var(--navy-100);
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumbs %}<span class="sep">/</span><span class="here">Dashboard</span>{% endblock %}
+
+{% block content %}
+<section class="hero rise">
+  <div class="bg" style="background-image:url('{% static 'images/hero-building.jpg' %}')"></div>
+  <div class="veil"></div>
+  <div class="inner">
+    <h1>Good day, {{ user.get_full_name|default:user.username }}.</h1>
+    <p class="sub">
+      This month you are collecting <b>{{ target_month|date:"F Y" }}</b> rent —
+      RentFlow bills in arrears, so last month's rent is what's due now.
+    </p>
+    <div class="actions">
+      <a class="btn btn-accent" href="{% url 'payments:make_payment' %}">Record a payment</a>
+      <a class="btn btn-outline" style="background:rgba(255,255,255,0.92)" href="{% url 'properties:overview' %}">Manage properties</a>
+    </div>
+  </div>
+</section>
+
+<div class="stat-row rise rise-1">
+  <div class="stat">
+    <span class="k">Occupants</span>
+    <span class="v">{{ cards.occupants }}</span>
+    <span class="s">{{ cards.occupied }} active tenancies</span>
+  </div>
+  <div class="stat">
+    <span class="k">Occupied units</span>
+    <span class="v">{{ cards.occupied }}</span>
+    <span class="s">{{ cards.vacant }} vacant</span>
+  </div>
+  <div class="stat accent">
+    <span class="k">Collection target — {{ target_month|date:"M Y" }}</span>
+    <span class="v">৳ {{ cards.collection_target|floatformat:0|intcomma }}</span>
+    <span class="s">payable 1–20 {% now "M" %}</span>
+  </div>
+  <div class="stat green">
+    <span class="k">Received this month</span>
+    <span class="v">৳ {{ cards.received_month|floatformat:0|intcomma }}</span>
+    <span class="s">all methods combined</span>
+  </div>
+  <div class="stat red">
+    <span class="k">Outstanding</span>
+    <span class="v">৳ {{ cards.outstanding|floatformat:0|intcomma }}</span>
+    <span class="s">due + overdue months</span>
+  </div>
+</div>
+
+<div class="dash-grid">
+  <div>
+    <div class="panel rise rise-2" style="margin-bottom:20px;">
+      <div class="panel-head">
+        <div>
+          <h2>Monthly collections</h2>
+          <span class="small muted">Cash received per calendar month — last 6 months</span>
+        </div>
+      </div>
+      <div class="panel-body"><div class="chart-box"><canvas id="barChart"></canvas></div></div>
+    </div>
+
+    <div class="panel rise rise-3" style="margin-bottom:20px;">
+      <div class="panel-head">
+        <div>
+          <h2>Rent-month revenue trend</h2>
+          <span class="small muted">Revenue attributed to each rent period — 12 months</span>
+        </div>
+      </div>
+      <div class="panel-body"><div class="chart-box"><canvas id="lineChart"></canvas></div></div>
+    </div>
+
+    {% if overdue_rows %}
+    <div class="panel rise rise-3" style="margin-bottom:20px; border-left:4px solid var(--red-600);">
+      <div class="panel-head">
+        <div>
+          <h2 style="color:var(--red-600);">Overdue rent</h2>
+          <span class="small muted">Past the 20th of the following month — act on these first</span>
+        </div>
+        <a class="btn btn-sm btn-outline" href="{% url 'payments:main' %}">See all</a>
+      </div>
+      <div class="panel-body">
+        {% for r in overdue_rows %}
+        <div class="due-strip">
+          <div style="flex:1">
+            <div class="who" style="font-weight:700; font-size:13px;">{{ r.occ.occupant.full_name }}</div>
+            <div class="small muted">
+              {{ r.m.label }} rent · Flat {{ r.occ.flat.number }}, Building {{ r.occ.flat.building.number }}
+              · ৳ {{ r.m.rent|floatformat:0|intcomma }}
+            </div>
+          </div>
+          <span class="days">{{ r.m.days_overdue }} day{{ r.m.days_overdue|pluralize }} overdue</span>
+          <a class="btn btn-sm btn-primary" href="{% url 'payments:make_payment' %}?flat={{ r.occ.flat_id }}">Collect</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel rise rise-2" style="margin-bottom:20px;">
+      <div class="panel-head"><h2>Occupancy & status</h2></div>
+      <div class="panel-body">
+        <div class="gauge-wrap" style="margin-bottom:16px;">
+          <div class="gauge">
+            <canvas id="gaugeChart"></canvas>
+            <div class="val">{{ occupancy_rate }}%</div>
+          </div>
+          <div>
+            <div style="font-weight:700; color:var(--navy-900);">Occupancy rate</div>
+            <div class="small muted">{{ cards.occupied }} of {{ cards.occupied|add:cards.vacant }} units let</div>
+          </div>
+        </div>
+        <hr class="divider">
+        <div class="chart-box" style="height:190px;"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel rise rise-3" style="margin-bottom:20px;">
+      <div class="panel-head">
+        <h2>Recent payments</h2>
+        <a class="small" href="{% url 'payments:manage' %}">History →</a>
+      </div>
+      <div class="panel-body">
+        {% for p in recent_payments %}
+        <div class="activity-item">
+          <div class="ico" style="background:var(--green-100); color:var(--green-600);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <div>
+            <div class="who">{{ p.occupancy.occupant.full_name }}</div>
+            <div class="what">{{ p.period_label }} · {{ p.get_method_display }} · {{ p.payment_date|date:"d M" }}</div>
+          </div>
+          <div class="amt">৳ {{ p.amount|floatformat:0|intcomma }}</div>
+        </div>
+        {% empty %}
+        <div class="empty">No payments recorded yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel rise rise-4">
+      <div class="panel-head"><h2>Due within 7 days</h2></div>
+      <div class="panel-body">
+        {% for r in upcoming_rows %}
+        <div class="due-strip warn">
+          <div style="flex:1">
+            <div style="font-weight:700; font-size:13px;">{{ r.occ.occupant.full_name }}</div>
+            <div class="small muted">{{ r.m.label }} · due {{ r.m.due_date|date:"d M" }}</div>
+          </div>
+          <a class="btn btn-sm btn-outline" href="{% url 'payments:make_payment' %}?flat={{ r.occ.flat_id }}">Collect</a>
+        </div>
+        {% empty %}
+        <div class="empty">Nothing falls due in the next week.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/vendor/chart.umd.js' %}"></script>
+<script>
+  const D = JSON.parse('{{ chart_data|escapejs }}');
+  Chart.defaults.font.family = "Arial, sans-serif";
+  Chart.defaults.color = "#6b7280";
+
+  new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: { labels: D.bar.labels, datasets: [{
+      data: D.bar.values, backgroundColor: "#16305c",
+      hoverBackgroundColor: "#e46f2e", borderRadius: 4, maxBarThickness: 44 }] },
+    options: { plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: "#f0f2f5" }, ticks: { callback: v => "৳" + (v/1000) + "k" } },
+                x: { grid: { display: false } } },
+      maintainAspectRatio: false, animation: { duration: 700, easing: "easeOutQuart" } }
+  });
+
+  new Chart(document.getElementById("lineChart"), {
+    type: "line",
+    data: { labels: D.line.labels, datasets: [{
+      data: D.line.values, borderColor: "#e46f2e", borderWidth: 2.5,
+      pointRadius: 3, pointBackgroundColor: "#fff", pointBorderColor: "#e46f2e",
+      fill: true, tension: 0.35,
+      backgroundColor: (ctx) => {
+        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 240);
+        g.addColorStop(0, "rgba(228,111,46,0.18)"); g.addColorStop(1, "rgba(228,111,46,0)");
+        return g;
+      } }] },
+    options: { plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: "#f0f2f5" }, ticks: { callback: v => "৳" + (v/1000) + "k" } },
+                x: { grid: { display: false } } },
+      maintainAspectRatio: false }
+  });
+
+  new Chart(document.getElementById("pieChart"), {
+    type: "doughnut",
+    data: { labels: ["Fully paid", "Due", "Overdue"],
+      datasets: [{ data: [D.status.paid, D.status.due, D.status.overdue],
+        backgroundColor: ["#1f7a4d", "#a16207", "#b3362b"], borderWidth: 2, borderColor: "#fff" }] },
+    options: { cutout: "62%", plugins: { legend: { position: "bottom", labels: { boxWidth: 10, padding: 14 } } },
+      maintainAspectRatio: false }
+  });
+
+  new Chart(document.getElementById("gaugeChart"), {
+    type: "doughnut",
+    data: { datasets: [{ data: [D.occupancy_rate, 100 - D.occupancy_rate],
+      backgroundColor: ["#16305c", "#e5e8ed"], borderWidth: 0 }] },
+    options: { rotation: -90, circumference: 180, cutout: "72%",
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      maintainAspectRatio: false }
+  });
+</script>
+{% endblock %}

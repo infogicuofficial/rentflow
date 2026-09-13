@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}{{ occupant.full_name }}{% endblock %}
+{% block breadcrumbs %}
+<span class="sep">/</span><a href="{% url 'properties:occupant_list' %}">Occupants</a>
+<span class="sep">/</span><span class="here">{{ occupant.full_name }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="detail-hero rise">
+  <div class="photo" style="background-image:url('{% if occupant.photo %}{{ occupant.photo.url }}{% else %}{% static 'images/occupant-placeholder.jpg' %}{% endif %}')"></div>
+  <div class="info">
+    <span class="tag">Occupant profile · {{ occupant.occupant_id }}</span>
+    <h1>{{ occupant.full_name }}</h1>
+    <div class="addr">
+      {% if occ %}Flat {{ occ.flat.number }}, Building {{ occ.flat.building.number }} — {{ occ.flat.building.name }}{% else %}No current tenancy{% endif %}
+    </div>
+    <div class="chips">
+      <span class="chip">{{ occupant.phone }}</span>
+      <span class="chip">{{ occupant.email }}</span>
+      {% if occupant.nid %}<span class="chip">NID {{ occupant.nid }}</span>{% endif %}
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-primary" href="{% url 'properties:occupant_edit' occupant.pk %}">Edit profile</a>
+      {% if occ %}<a class="btn btn-accent" href="{% url 'payments:make_payment' %}?flat={{ occ.flat.pk }}">Record payment</a>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div>
+    {% if occ %}
+    <div class="panel rise rise-1" style="margin-bottom:20px;">
+      <div class="panel-head"><h2>Current occupancy</h2>
+        {% if occ.notice_given %}<span class="badge badge-orange">Notice given</span>{% endif %}
+      </div>
+      <div class="panel-body">
+        <dl class="kv">
+          <dt>Property</dt><dd><a href="{% url 'properties:flat_detail' occ.flat.pk %}">Flat {{ occ.flat.number }}, Bld {{ occ.flat.building.number }}</a></dd>
+          <dt>Since</dt><dd>{{ occ.start_date|date:"d F Y" }}</dd>
+          <dt>Current rent</dt><dd>৳ {{ occ.current_rent|floatformat:0|intcomma }} / month</dd>
+          <dt>Deposit left</dt><dd>৳ {{ occ.deposit_balance|floatformat:0|intcomma }}</dd>
+        </dl>
+        {% if summary and summary.payable %}
+        <hr class="divider">
+        <div class="alert alert-red" style="margin-bottom:0;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          <div><b>{{ summary.payable|length }} unpaid month{{ summary.payable|length|pluralize }}</b> totalling ৳ {{ summary.total_payable|floatformat:0|intcomma }}.</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel rise rise-2">
+      <div class="panel-head"><h2>Payment history</h2></div>
+      <div class="panel-body flush table-wrap">
+        <table class="table">
+          <thead><tr><th>Period</th><th class="num">Amount</th><th>Paid on</th><th>Method</th><th>Status</th><th>Invoice</th></tr></thead>
+          <tbody>
+            {% for p in payments %}
+            <tr>
+              <td style="font-weight:700;">{{ p.period_label }}</td>
+              <td class="num">৳ {{ p.amount|floatformat:0|intcomma }}</td>
+              <td>{{ p.payment_date|date:"d M Y" }}</td>
+              <td>{{ p.get_method_display }}</td>
+              <td><span class="badge badge-{{ p.status }}">{{ p.get_status_display }}</span></td>
+              <td>{% if p.invoice.pdf %}<a href="{{ p.invoice.pdf.url }}" target="_blank">{{ p.invoice.number }}</a>{% else %}—{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="empty">No payments on record.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel rise rise-2" style="margin-bottom:20px;">
+      <div class="panel-head"><h2>Document library</h2></div>
+      <div class="panel-body">
+        {% for d in documents %}
+        <a class="doc-tile" href="{{ d.file.url }}" target="_blank">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v5h5M7 3h7l5 5v13H7z"/></svg>
+          </div>
+          <div>
+            <div class="nm">{{ d.title }}</div>
+            <div class="mt">{{ d.get_doc_type_display }} · uploaded {{ d.uploaded_at|date:"d M Y" }}</div>
+          </div>
+        </a>
+        {% empty %}
+        <div class="empty" style="padding:20px;">No documents uploaded yet.</div>
+        {% endfor %}
+        <hr class="divider">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="upload_document" value="1">
+          <div class="field">
+            <label>Document type</label>
+            <select class="select" name="doc_type">
+              <option value="nid">NID</option><option value="id">ID Card</option>
+              <option value="agreement">Agreement</option><option value="legal">Legal proof</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Title</label><input class="input" name="title" required placeholder="e.g. NID front scan"></div>
+          <div class="field"><label>File</label><input class="input" type="file" name="file" required></div>
+          <button class="btn btn-primary" type="submit" style="width:100%;">Upload document</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel rise rise-3">
+      <div class="panel-head"><h2>Emergency contact</h2></div>
+      <div class="panel-body">
+        {% if occupant.emergency_contact_name %}
+        <dl class="kv">
+          <dt>Name</dt><dd>{{ occupant.emergency_contact_name }}</dd>
+          <dt>Phone</dt><dd>{{ occupant.emergency_contact_phone }}</dd>
+        </dl>
+        {% else %}
+        <div class="empty" style="padding:16px;">No emergency contact recorded.</div>
+        {% endif %}
+        {% if occupant.notes %}
+        <hr class="divider">
+        <b class="small" style="color:var(--navy-900);">NOTES</b>
+        <p class="small muted" style="margin-top:6px;">{{ occupant.notes|linebreaksbr }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
